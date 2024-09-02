@@ -33,7 +33,8 @@
 //! ```
 //! [__Complete examples__](https://github.com/carloskiki/leptos-icons/tree/main/examples) are available on github.
 
-use leptos::*;
+
+use leptos::{prelude::*, svg};
 
 /// The Icon component.
 #[component]
@@ -43,28 +44,30 @@ pub fn Icon(
     icon: MaybeSignal<icondata_core::Icon>,
     /// The width of the icon (horizontal side length of the square surrounding the icon). Defaults to "1em".
     #[prop(into, optional)]
-    width: MaybeProp<TextProp>,
+    width: Option<MaybeSignal<String>>,
     /// The height of the icon (vertical side length of the square surrounding the icon). Defaults to "1em".
     #[prop(into, optional)]
-    height: MaybeProp<TextProp>,
+    height: Option<MaybeSignal<String>>,
     /// HTML class attribute.
     #[prop(into, optional)]
-    class: MaybeProp<TextProp>,
+    class: Option<MaybeSignal<String>>,
     /// HTML style attribute.
     #[prop(into, optional)]
-    style: MaybeProp<TextProp>,
+    style: Option<MaybeSignal<String>>,
 ) -> impl IntoView
 where
 {
     let svg = move || {
         let icon = icon.get();
-        let mut svg = svg::svg();
-        if let Some(classes) = class.get() {
-            svg = svg.classes(classes.get());
-        }
-        let mut svg = match (style.get(), icon.style) {
-            (Some(a), Some(b)) => svg.attr("style", format!("{b} {}", a.get())),
-            (Some(a), None) => svg.attr("style", a.get()),
+        let svg = svg::svg().inner_html(icon.data);
+        let svg = if let Some(classes) = class.as_ref().map(|el| el.get()) {
+            svg.class(classes).into_any()
+        } else {
+            svg.into_any()
+        };
+        let mut svg = match (style.as_ref().map(|el| el.get()), icon.style) {
+            (Some(a), Some(b)) => svg.attr("style", format!("{b} {}", a)),
+            (Some(a), None) => svg.attr("style", a),
             (None, Some(b)) => svg.attr("style", b),
             (None, None) => svg,
         };
@@ -78,17 +81,17 @@ where
         // We ignore the width and height attributes of the icon, even if the user hasn't specified any.
         svg = svg.attr(
             "width",
-            Attribute::String(match (width.get(), icon.width) {
-                (Some(a), _) => Oco::from(a.get()),
-                _ => Oco::from("1em"),
-            }),
+            match (width.as_ref().map(|el| el.get()), icon.width) {
+                (Some(a), _) => a,
+                _ => "1em".to_string(),
+            },
         );
         svg = svg.attr(
             "height",
-            Attribute::String(match (height.get(), icon.height) {
-                (Some(a), _) => Oco::from(a.get()),
-                _ => Oco::from("1em"),
-            }),
+            match (height.as_ref().map(|el| el.get()), icon.height) {
+                (Some(a), _) => a,
+                _ => "1em".to_string(),
+            },
         );
         if let Some(view_box) = icon.view_box {
             svg = svg.attr("viewBox", view_box);
@@ -107,7 +110,6 @@ where
         }
         svg = svg.attr("fill", icon.fill.unwrap_or("currentColor"));
         svg = svg.attr("role", "graphics-symbol");
-        svg = svg.inner_html(icon.data);
         svg
     };
     IntoView::into_view(svg)
